@@ -20,17 +20,40 @@ export interface ImagePart {
   };
 }
 
-export type MessageContent = string | Array<TextPart | ImagePart>;
+export interface VideoPart {
+  type: "video_url";
+  video_url: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+}
+
+export interface AudioPart {
+  type: "audio_url";
+  audio_url: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+}
+
+export type MessageContent = string | Array<TextPart | ImagePart | VideoPart | AudioPart>;
 
 export interface Message {
   role: MessageRole;
   content: MessageContent;
 }
 
+export interface Plugin {
+  id: "web";
+  max_results?: number;
+  search_prompt?: string;
+}
+
 export interface APIOptions {
   temperature?: number;
   max_tokens?: number;
   model?: string;
+  plugins?: Plugin[];
 }
 
 export interface ChatCompletionRequest {
@@ -40,6 +63,7 @@ export interface ChatCompletionRequest {
   max_tokens?: number;
   stream?: boolean;
   usage?: { include: boolean };
+  plugins?: Plugin[];
 }
 
 export interface ChatCompletionResponse {

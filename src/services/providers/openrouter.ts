@@ -39,6 +39,25 @@ const handleApiError = async (response: Response): Promise<never> => {
   throw new Error(msg);
 };
 
+// Helper function to get model-specific max_tokens. Shared by both send and stream flows.
+const getModelMaxTokens = (model: string, defaultMaxTokens: number = 8192): number => {
+  const MODEL_CONFIGS: Record<string, { max_tokens: number; context_window: number }> = {
+    "z-ai/glm-4.5v": {
+      max_tokens: 16000,
+      context_window: 64000,
+    },
+    "z-ai/glm-4.5": {
+      max_tokens: 8192,
+      context_window: 64000,
+    },
+    "z-ai/glm-4.5-air:free": {
+      max_tokens: 8192,
+      context_window: 64000,
+    },
+  };
+  return MODEL_CONFIGS[model]?.max_tokens || defaultMaxTokens;
+};
+
 export const openRouterProvider: AIServiceProvider = {
   async sendMessage(messages: Message[], apiKey: string, options: APIOptions = {}) {
     const cleanApiKey = prepareApiKey(apiKey);
@@ -69,12 +88,14 @@ export const openRouterProvider: AIServiceProvider = {
           return m;
         });
 
+        const modelToUse = options.model || "x-ai/grok-4";
         const requestBody: ChatCompletionRequest = {
-          model: options.model || "x-ai/grok-4",
+          model: modelToUse,
           messages: cachedMessages,
           temperature: options.temperature ?? 0.7,
-          max_tokens: options.max_tokens ?? 8192,
+          max_tokens: options.max_tokens ?? getModelMaxTokens(modelToUse),
           usage: { include: true },
+          ...(options.plugins && { plugins: options.plugins }),
         };
 
         console.log("OpenRouter send (attempt " + (retries + 1) + "):", prepareRequestLog(OPENROUTER_URL, requestBody));
@@ -86,7 +107,7 @@ export const openRouterProvider: AIServiceProvider = {
             "Authorization": `Bearer ${cleanApiKey}`,
             "Accept": "application/json",
             "HTTP-Referer": (typeof window !== 'undefined' ? window.location.origin : '') || "",
-            "X-Title": "GrokTalk"
+            "X-Title": "LampsGPT"
           },
           body: JSON.stringify(requestBody)
         });
@@ -127,13 +148,15 @@ export const openRouterProvider: AIServiceProvider = {
           return m;
         });
 
+        const modelToUse = options.model || "x-ai/grok-4";
         const requestBody: ChatCompletionRequest = {
-          model: options.model || "x-ai/grok-4",
+          model: modelToUse,
           messages: cachedMessages,
           temperature: options.temperature ?? 0.7,
-          max_tokens: options.max_tokens ?? 8192,
+          max_tokens: options.max_tokens ?? getModelMaxTokens(modelToUse),
           stream: true,
           usage: { include: true },
+          ...(options.plugins && { plugins: options.plugins }),
         };
 
         console.log("OpenRouter stream (attempt " + (retries + 1) + "):", prepareRequestLog(OPENROUTER_URL, requestBody));
@@ -148,7 +171,7 @@ export const openRouterProvider: AIServiceProvider = {
             "Authorization": `Bearer ${cleanApiKey}`,
             "Accept": "application/json",
             "HTTP-Referer": (typeof window !== 'undefined' ? window.location.origin : '') || "",
-            "X-Title": "GrokTalk"
+            "X-Title": "LampsGPT"
           },
           body: JSON.stringify(requestBody),
           signal: controller.signal

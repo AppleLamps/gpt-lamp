@@ -3,13 +3,23 @@ import { xaiService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { ProcessedFile } from "@/components/FileUploader";
 import { GPT4VisionPayload, MessageInterface, MessageRequestInterface, ModelType } from "@/types/chat";
+import { DEFAULT_WEB_PLUGIN } from '@/lib/constants';
+import { ensureOnlineSlug } from '@/lib/utils';
 
 // Define types that align with the xaiService types
 type MessageRole = "system" | "user" | "assistant";
 type MessageContentItem = {
-  type: "text" | "image_url";
+  type: "text" | "image_url" | "video_url" | "audio_url";
   text?: string;
   image_url?: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+  video_url?: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+  audio_url?: {
     url: string;
     detail: "high" | "low" | "auto";
   };
@@ -81,6 +91,8 @@ interface ChatContextType {
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   regenerateMessage: (messageId: string) => void;
   setMessageReasoningVisible: (messageId: string, visible: boolean) => void;
+  isWebEnabled: boolean;
+  toggleWebSearch: () => void;
 }
 
 // Create context
@@ -147,6 +159,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const [savedChats, setSavedChats] = useState<SavedChat[]>(() =>
     retrieveFromLocalStorage<SavedChat[]>(STORAGE_KEYS.SAVED_CHATS, [])
   );
+  const [isWebEnabled, setIsWebEnabled] = useState(false);
 
   // Refs
   const streamingContentRef = useRef<string>("");
@@ -740,7 +753,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     isImageRequest: boolean = false,
     customMessageId?: string,
     isGeneratingImage?: boolean,
-    imagePrompt?: string
+    imagePrompt?: string,
+    // Add a parameter to allow overriding the web search setting, e.g., for retries
+    forceWebSearch?: boolean
   ) => {
     if (!content.trim() && images.length === 0 && files.length === 0) return;
 
@@ -757,7 +772,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     // Generate message ID
     const id = customMessageId || generateId();
 
-    // Check if vision model should be used
+    // Check if vision model should be used (for uploaded images)
     const shouldUseVisionModel = images.length > 0;
 
     // Create message content
@@ -866,11 +881,29 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             : '[complex content]'
         }))));
 
-        // Select model
-        const modelToUse = shouldUseVisionModel ? "x-ai/grok-vision-beta" : currentModel;
+        const webSearchActive = forceWebSearch ?? isWebEnabled;
 
-      // Use streaming API with API-aligned callback structure (single-flight guard)
-      if (streamCompletedRef.current) return;
+        // Helper function to select appropriate vision model
+        const getVisionModel = (currentModel: string): string => {
+          // If current model is GLM 4.5V, use it for vision tasks
+          if (currentModel === "z-ai/glm-4.5v") {
+            return "z-ai/glm-4.5v";
+          }
+          // Default to Grok Vision Beta for other models
+          return "x-ai/grok-vision-beta";
+        };
+
+        // Select model and add plugins if web search is enabled
+        const modelToUse = shouldUseVisionModel
+          ? getVisionModel(currentModel)
+          : webSearchActive
+            ? ensureOnlineSlug(currentModel)
+            : currentModel;
+
+        const plugins = webSearchActive ? [DEFAULT_WEB_PLUGIN] : undefined;
+
+        // Use streaming API with API-aligned callback structure (single-flight guard)
+        if (streamCompletedRef.current) return;
         await xaiService.streamResponse(
           apiMessages,
           apiKey,
@@ -961,13 +994,37 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             },
             onError: (error) => {
               console.error("Stream error:", error);
+              // Check for web search plugin error
+              if (webSearchActive && error.message.includes("plugin")) {
+                toast({
+                  title: "Web Search Not Available",
+                  description: "Web search is not available for this model. Trying again without web search.",
+                  variant: "default",
+                });
+                // Resend the message without web search
+                // remove the last message, which is the user message
+                setMessages(prev => prev.slice(0, -1));
+                handleSendMessage(
+                  content,
+                  images,
+                  files,
+                  isBotGenerated,
+                  isImageRequest,
+                  customMessageId,
+                  isGeneratingImage,
+                  imagePrompt,
+                  false // force web search to be false
+                );
+                return;
+              }
+
               setIsProcessing(false);
               setStreamingMessage(null);
               streamCompletedRef.current = true;
 
               toast({
                 title: "Error",
-              description: error.message || "Failed to get response from the AI backend.",
+                description: error.message || "Failed to get response from the AI backend.",
                 variant: "destructive",
               });
             }
@@ -975,7 +1032,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
           {
             temperature: modelTemperature,
             max_tokens: maxTokens,
-            model: modelToUse
+            model: modelToUse,
+            plugins: plugins,
           }
         );
       } catch (error) {
@@ -1052,15 +1110,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     setIsProcessing(true);
 
     try {
-      // Check if we should use vision model
+      // Check if we should use vision model (for images, video, or audio)
       const shouldUseVisionModel = Array.isArray(userMessage.content) &&
-        userMessage.content.some(item => item.type === 'image_url');
+        userMessage.content.some(item => item.type === 'image_url' || item.type === 'video_url' || item.type === 'audio_url');
 
       // Prepare API messages
       const apiMessages = prepareApiMessages(userMessage, previousMessages, shouldUseVisionModel);
 
+      // Helper function to select appropriate vision model
+      const getVisionModel = (currentModel: string): string => {
+        // If current model is GLM 4.5V, use it for vision tasks
+        if (currentModel === "z-ai/glm-4.5v") {
+          return "z-ai/glm-4.5v";
+        }
+        // Default to Grok Vision Beta for other models
+        return "x-ai/grok-vision-beta";
+      };
+
       // Select model
-      const modelToUse = shouldUseVisionModel ? "x-ai/grok-vision-beta" : currentModel;
+      const modelToUse = shouldUseVisionModel ? getVisionModel(currentModel) : currentModel;
 
       // Create streaming message placeholder
       const streamingMessageId = generateId('assistant-');
@@ -1163,18 +1231,18 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   // Function to update a message with a generated image
   const updateMessageWithImage = (messageId: string, text: string, imageUrl: string) => {
     setMessages(prev => {
-      const updated = prev.map(msg =>
-        msg.id === messageId
-          ? {
-              ...msg,
-              content: [
-                { type: "text", text },
-                { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
-              ],
-              isGeneratingImage: false
-            }
-          : msg
-      );
+      const updated: Message[] = prev.map(msg => {
+        if (msg.id !== messageId) return msg;
+        const contentItems: MessageContentItem[] = [
+          { type: "text", text },
+          { type: "image_url", image_url: { url: imageUrl, detail: "high" as const } }
+        ];
+        return {
+          ...msg,
+          content: contentItems,
+          isGeneratingImage: false
+        } as Message;
+      });
 
       // Persist immediately with the updated array to avoid stale overwrites
       try {
@@ -1202,6 +1270,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     });
   };
 
+  const toggleWebSearch = () => setIsWebEnabled(prev => !prev);
+
   // Context value
   const contextValue: ChatContextType = {
     messages,
@@ -1227,7 +1297,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     setMessageReasoningVisible: (messageId: string, visible: boolean) => {
       setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reasoningVisible: visible } : m));
       setStreamingMessage(prev => prev && prev.id === messageId ? { ...prev, reasoningVisible: visible } as Message : prev);
-    }
+    },
+    isWebEnabled,
+    toggleWebSearch,
   };
 
   return (

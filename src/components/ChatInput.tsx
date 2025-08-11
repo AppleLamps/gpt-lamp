@@ -1,10 +1,11 @@
 import React, { useState, FormEvent, useRef, useEffect } from "react";
-import { Send, Plus, X, Image as ImageIcon, Paperclip, ChevronDown, ChevronUp, Camera, Sparkles, ArrowUp } from "lucide-react";
+import { Send, Plus, X, Image as ImageIcon, Paperclip, ChevronDown, ChevronUp, Camera, Sparkles, ArrowUp, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FileUploader, { ProcessedFile } from "./FileUploader";
 import { useToast } from "@/hooks/use-toast";
 import { xaiService } from "@/services/api";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useChatContext } from "@/contexts/ChatContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper function to generate IDs
@@ -43,6 +44,7 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentModel, setCurrentModel } = useSettings();
+  const { isWebEnabled, toggleWebSearch } = useChatContext();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -149,7 +151,7 @@ const ChatInput = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
           'HTTP-Referer': window?.location?.origin || '',
-          'X-Title': 'GrokTalk'
+          'X-Title': 'LampsGPT'
         },
         body: JSON.stringify({
           model: "x-ai/grok-3",
@@ -547,6 +549,22 @@ const ChatInput = ({
                 <Paperclip size={16} />
                 {showFileUploader ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
+
+              <button
+                type="button"
+                onClick={toggleWebSearch}
+                disabled={isProcessing}
+                className={cn(
+                  "p-1.5 rounded-md",
+                  "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                  "hover:bg-gray-100 dark:hover:bg-gray-600",
+                  isWebEnabled && "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+                  isProcessing && "opacity-50 cursor-not-allowed"
+                )}
+                title="Toggle web search"
+              >
+                <Search size={16} />
+              </button>
             </div>
             
             <div className="flex items-center gap-2">
@@ -578,6 +596,7 @@ const ChatInput = ({
                       <SelectItem value="x-ai/grok-3">Grok‑3</SelectItem>
                       <SelectItem value="x-ai/grok-4">Grok‑4</SelectItem>
                        <SelectItem value="z-ai/glm-4.5">GLM 4.5</SelectItem>
+                       <SelectItem value="z-ai/glm-4.5v">GLM 4.5V (Vision)</SelectItem>
                        <SelectItem value="z-ai/glm-4.5-air:free">GLM 4.5 Air (free)</SelectItem>
                       <SelectItem value="google/gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
                       <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>

@@ -83,7 +83,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${inputApiKey}`,
           'HTTP-Referer': window?.location?.origin || '',
-          'X-Title': 'GrokTalk'
+          'X-Title': 'LampsGPT'
         },
         body: JSON.stringify({
           model: "x-ai/grok-3",
