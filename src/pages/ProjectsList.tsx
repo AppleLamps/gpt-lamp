@@ -135,7 +135,7 @@ const ProjectsList: React.FC = () => {
               </Link>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Projects</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <a
                 href="/projects-import-template.json"
                 download
@@ -174,7 +174,7 @@ const ProjectsList: React.FC = () => {
                 className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-md shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50"
               >
                 <Plus size={16} className="mr-2" />
-                {!isMobile && "New Project"}
+                New Project
               </button>
             </div>
           </div>
@@ -183,7 +183,7 @@ const ProjectsList: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Search and View Controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sticky top-16 bg-gray-50 dark:bg-gray-900 py-3 z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:sticky md:top-16 bg-gray-50 dark:bg-gray-900 md:py-3 z-10">
           <div className="relative flex-grow max-w-md">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />

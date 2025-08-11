@@ -81,9 +81,9 @@ const ChatInterface: React.FC = () => {
               {isMobile ? (
                 // Mobile layout - sidebar is fixed position and overlays
                 <>
-                  {/* Backdrop overlay (z-60) - higher than header but lower than sidebar */}
+                  {/* Backdrop overlay (z-40) - higher than header/input but lower than sidebar */}
                   <div className={cn(
-                    "fixed inset-0 z-60 bg-black/50 transition-opacity duration-300 ease-in-out", 
+                    "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ease-in-out", 
                     sidebarVisible ? "opacity-100" : "opacity-0 pointer-events-none",
                   )}>
                     {/* Clicks outside sidebar close it */}
@@ -94,9 +94,9 @@ const ChatInterface: React.FC = () => {
                     ></div>
                   </div>
                   
-                  {/* Sidebar (z-70) - highest element to appear above everything */}
+                  {/* Sidebar (z-50) - highest element to appear above everything */}
                   <div className={cn(
-                    "fixed inset-y-0 left-0 z-70 w-64 transition-transform duration-300 ease-in-out",
+                    "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 ease-in-out",
                     sidebarVisible ? "translate-x-0" : "-translate-x-full"
                   )}>
                     <ChatSidebar 
