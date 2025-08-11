@@ -3,6 +3,8 @@ import { xaiService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { ProcessedFile } from "@/components/FileUploader";
 import { GPT4VisionPayload, MessageInterface, MessageRequestInterface, ModelType } from "@/types/chat";
+import { DEFAULT_WEB_PLUGIN } from '@/lib/constants';
+import { ensureOnlineSlug } from '@/lib/utils';
 
 // Define types that align with the xaiService types
 type MessageRole = "system" | "user" | "assistant";
@@ -81,6 +83,8 @@ interface ChatContextType {
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   regenerateMessage: (messageId: string) => void;
   setMessageReasoningVisible: (messageId: string, visible: boolean) => void;
+  isWebEnabled: boolean;
+  toggleWebSearch: () => void;
 }
 
 // Create context
@@ -147,6 +151,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const [savedChats, setSavedChats] = useState<SavedChat[]>(() =>
     retrieveFromLocalStorage<SavedChat[]>(STORAGE_KEYS.SAVED_CHATS, [])
   );
+  const [isWebEnabled, setIsWebEnabled] = useState(false);
 
   // Refs
   const streamingContentRef = useRef<string>("");
@@ -740,7 +745,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     isImageRequest: boolean = false,
     customMessageId?: string,
     isGeneratingImage?: boolean,
-    imagePrompt?: string
+    imagePrompt?: string,
+    // Add a parameter to allow overriding the web search setting, e.g., for retries
+    forceWebSearch?: boolean
   ) => {
     if (!content.trim() && images.length === 0 && files.length === 0) return;
 
@@ -866,11 +873,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             : '[complex content]'
         }))));
 
-        // Select model
-        const modelToUse = shouldUseVisionModel ? "x-ai/grok-vision-beta" : currentModel;
+        const webSearchActive = forceWebSearch ?? isWebEnabled;
 
-      // Use streaming API with API-aligned callback structure (single-flight guard)
-      if (streamCompletedRef.current) return;
+        // Select model and add plugins if web search is enabled
+        const modelToUse = shouldUseVisionModel
+          ? "x-ai/grok-vision-beta"
+          : webSearchActive
+            ? ensureOnlineSlug(currentModel)
+            : currentModel;
+
+        const plugins = webSearchActive ? [DEFAULT_WEB_PLUGIN] : undefined;
+
+        // Use streaming API with API-aligned callback structure (single-flight guard)
+        if (streamCompletedRef.current) return;
         await xaiService.streamResponse(
           apiMessages,
           apiKey,
@@ -961,13 +976,37 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             },
             onError: (error) => {
               console.error("Stream error:", error);
+              // Check for web search plugin error
+              if (webSearchActive && error.message.includes("plugin")) {
+                toast({
+                  title: "Web Search Not Available",
+                  description: "Web search is not available for this model. Trying again without web search.",
+                  variant: "default",
+                });
+                // Resend the message without web search
+                // remove the last message, which is the user message
+                setMessages(prev => prev.slice(0, -1));
+                handleSendMessage(
+                  content,
+                  images,
+                  files,
+                  isBotGenerated,
+                  isImageRequest,
+                  customMessageId,
+                  isGeneratingImage,
+                  imagePrompt,
+                  false // force web search to be false
+                );
+                return;
+              }
+
               setIsProcessing(false);
               setStreamingMessage(null);
               streamCompletedRef.current = true;
 
               toast({
                 title: "Error",
-              description: error.message || "Failed to get response from the AI backend.",
+                description: error.message || "Failed to get response from the AI backend.",
                 variant: "destructive",
               });
             }
@@ -975,7 +1014,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
           {
             temperature: modelTemperature,
             max_tokens: maxTokens,
-            model: modelToUse
+            model: modelToUse,
+            plugins: plugins,
           }
         );
       } catch (error) {
@@ -1202,6 +1242,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     });
   };
 
+  const toggleWebSearch = () => setIsWebEnabled(prev => !prev);
+
   // Context value
   const contextValue: ChatContextType = {
     messages,
@@ -1227,7 +1269,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     setMessageReasoningVisible: (messageId: string, visible: boolean) => {
       setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reasoningVisible: visible } : m));
       setStreamingMessage(prev => prev && prev.id === messageId ? { ...prev, reasoningVisible: visible } as Message : prev);
-    }
+    },
+    isWebEnabled,
+    toggleWebSearch,
   };
 
   return (

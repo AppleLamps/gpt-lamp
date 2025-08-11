@@ -27,10 +27,17 @@ export interface Message {
   content: MessageContent;
 }
 
+export interface Plugin {
+  id: "web";
+  max_results?: number;
+  search_prompt?: string;
+}
+
 export interface APIOptions {
   temperature?: number;
   max_tokens?: number;
   model?: string;
+  plugins?: Plugin[];
 }
 
 export interface ChatCompletionRequest {
@@ -40,6 +47,7 @@ export interface ChatCompletionRequest {
   max_tokens?: number;
   stream?: boolean;
   usage?: { include: boolean };
+  plugins?: Plugin[];
 }
 
 export interface ChatCompletionResponse {

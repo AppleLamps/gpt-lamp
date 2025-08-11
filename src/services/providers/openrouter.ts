@@ -75,6 +75,7 @@ export const openRouterProvider: AIServiceProvider = {
           temperature: options.temperature ?? 0.7,
           max_tokens: options.max_tokens ?? 8192,
           usage: { include: true },
+          ...(options.plugins && { plugins: options.plugins }),
         };
 
         console.log("OpenRouter send (attempt " + (retries + 1) + "):", prepareRequestLog(OPENROUTER_URL, requestBody));
@@ -134,6 +135,7 @@ export const openRouterProvider: AIServiceProvider = {
           max_tokens: options.max_tokens ?? 8192,
           stream: true,
           usage: { include: true },
+          ...(options.plugins && { plugins: options.plugins }),
         };
 
         console.log("OpenRouter stream (attempt " + (retries + 1) + "):", prepareRequestLog(OPENROUTER_URL, requestBody));
