@@ -88,6 +88,28 @@ export const openRouterProvider: AIServiceProvider = {
           return m;
         });
 
+<<<<<<< HEAD
+=======
+        // Helper function to get model-specific max_tokens
+        const getModelMaxTokens = (model: string, defaultMaxTokens: number = 8192): number => {
+          const MODEL_CONFIGS: Record<string, { max_tokens: number; context_window: number }> = {
+            "z-ai/glm-4.5v": {
+              max_tokens: 16000,
+              context_window: 64000
+            },
+            "z-ai/glm-4.5": {
+              max_tokens: 8192,
+              context_window: 64000
+            },
+            "z-ai/glm-4.5-air:free": {
+              max_tokens: 8192,
+              context_window: 64000
+            }
+          };
+          return MODEL_CONFIGS[model]?.max_tokens || defaultMaxTokens;
+        };
+
+>>>>>>> 095c674a1835c02c04a72bbec0e50daf4b9c0773
         const modelToUse = options.model || "x-ai/grok-4";
         const requestBody: ChatCompletionRequest = {
           model: modelToUse,
