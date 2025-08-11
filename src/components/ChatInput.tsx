@@ -596,6 +596,7 @@ const ChatInput = ({
                       <SelectItem value="x-ai/grok-3">Grok‑3</SelectItem>
                       <SelectItem value="x-ai/grok-4">Grok‑4</SelectItem>
                        <SelectItem value="z-ai/glm-4.5">GLM 4.5</SelectItem>
+                       <SelectItem value="z-ai/glm-4.5v">GLM 4.5V (Vision)</SelectItem>
                        <SelectItem value="z-ai/glm-4.5-air:free">GLM 4.5 Air (free)</SelectItem>
                       <SelectItem value="google/gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
                       <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>

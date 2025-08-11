@@ -4,7 +4,7 @@ import type { APIOptions, ChatCompletionRequest, ChatCompletionResponse } from "
 
 // Shared type definitions
 type MessageRole = "system" | "user" | "assistant";
-type MessageContent = string | { type: "text" | "image_url"; text?: string; image_url?: { url: string; detail: "high" | "low" | "auto" } }[];
+type MessageContent = string | { type: "text" | "image_url" | "video_url" | "audio_url"; text?: string; image_url?: { url: string; detail: "high" | "low" | "auto" }; video_url?: { url: string; detail: "high" | "low" | "auto" }; audio_url?: { url: string; detail: "high" | "low" | "auto" } }[];
 interface Message { role: MessageRole; content: MessageContent; }
 
 // Stream response type no longer needed directly; provider handles it
@@ -12,6 +12,28 @@ interface Message { role: MessageRole; content: MessageContent; }
 // Configuration
 // Switched to OpenRouter unified endpoint
 const XAI_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+// Model-specific configurations
+const MODEL_CONFIGS: Record<string, { max_tokens: number; context_window: number }> = {
+  "z-ai/glm-4.5v": {
+    max_tokens: 16000,
+    context_window: 64000
+  },
+  "z-ai/glm-4.5": {
+    max_tokens: 8192,
+    context_window: 64000
+  },
+  "z-ai/glm-4.5-air:free": {
+    max_tokens: 8192,
+    context_window: 64000
+  }
+};
+
+// Helper function to get model-specific max_tokens
+const getModelMaxTokens = (model: string, defaultMaxTokens: number = 8192): number => {
+  return MODEL_CONFIGS[model]?.max_tokens || defaultMaxTokens;
+};
+
 const DEFAULT_OPTIONS: APIOptions = {
   temperature: 0.7,
   max_tokens: 8192,
@@ -223,11 +245,12 @@ export const xaiService = {
         // Add markdown formatting instructions
         const formattedMessages = addMarkdownFormattingInstructions(messages);
 
+        const modelToUse = options.model || DEFAULT_OPTIONS.model!;
         const requestBody: ChatCompletionRequest = {
-          model: options.model || DEFAULT_OPTIONS.model!,
+          model: modelToUse,
           messages: formattedMessages,
           temperature: options.temperature || DEFAULT_OPTIONS.temperature,
-          max_tokens: options.max_tokens || DEFAULT_OPTIONS.max_tokens,
+          max_tokens: options.max_tokens || getModelMaxTokens(modelToUse),
           plugins: options.plugins,
         };
 
@@ -291,11 +314,12 @@ export const xaiService = {
         // Add markdown formatting instructions to text messages only
         const formattedMessages = addMarkdownFormattingInstructions(messages);
 
+        const modelToUse = options.model || DEFAULT_OPTIONS.model!;
         const requestBody: ChatCompletionRequest = {
-          model: options.model || DEFAULT_OPTIONS.model!,
+          model: modelToUse,
           messages: formattedMessages,
           temperature: options.temperature || DEFAULT_OPTIONS.temperature,
-          max_tokens: options.max_tokens || DEFAULT_OPTIONS.max_tokens,
+          max_tokens: options.max_tokens || getModelMaxTokens(modelToUse),
           stream: true,
           plugins: options.plugins,
         };

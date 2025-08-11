@@ -20,7 +20,23 @@ export interface ImagePart {
   };
 }
 
-export type MessageContent = string | Array<TextPart | ImagePart>;
+export interface VideoPart {
+  type: "video_url";
+  video_url: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+}
+
+export interface AudioPart {
+  type: "audio_url";
+  audio_url: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+}
+
+export type MessageContent = string | Array<TextPart | ImagePart | VideoPart | AudioPart>;
 
 export interface Message {
   role: MessageRole;

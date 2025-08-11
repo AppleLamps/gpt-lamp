@@ -5,9 +5,17 @@ export type MessageRole = "system" | "user" | "assistant";
 
 // Content types for messages
 export type MessageContentItem = {
-  type: "text" | "image_url";
+  type: "text" | "image_url" | "video_url" | "audio_url";
   text?: string;
   image_url?: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+  video_url?: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+  audio_url?: {
     url: string;
     detail: "high" | "low" | "auto";
   };
@@ -37,6 +45,7 @@ export type ModelType =
   | "x-ai/grok-4"
   | "x-ai/grok-vision-beta"
   | "z-ai/glm-4.5"
+  | "z-ai/glm-4.5v"
   | "z-ai/glm-4.5-air:free"
   | "google/gemini-2.5-flash-lite"
   | "google/gemini-2.5-flash"

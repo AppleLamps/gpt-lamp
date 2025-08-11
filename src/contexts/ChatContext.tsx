@@ -9,9 +9,17 @@ import { ensureOnlineSlug } from '@/lib/utils';
 // Define types that align with the xaiService types
 type MessageRole = "system" | "user" | "assistant";
 type MessageContentItem = {
-  type: "text" | "image_url";
+  type: "text" | "image_url" | "video_url" | "audio_url";
   text?: string;
   image_url?: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+  video_url?: {
+    url: string;
+    detail: "high" | "low" | "auto";
+  };
+  audio_url?: {
     url: string;
     detail: "high" | "low" | "auto";
   };
@@ -764,7 +772,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     // Generate message ID
     const id = customMessageId || generateId();
 
-    // Check if vision model should be used
+    // Check if vision model should be used (for uploaded images)
     const shouldUseVisionModel = images.length > 0;
 
     // Create message content
@@ -875,9 +883,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
 
         const webSearchActive = forceWebSearch ?? isWebEnabled;
 
+        // Helper function to select appropriate vision model
+        const getVisionModel = (currentModel: string): string => {
+          // If current model is GLM 4.5V, use it for vision tasks
+          if (currentModel === "z-ai/glm-4.5v") {
+            return "z-ai/glm-4.5v";
+          }
+          // Default to Grok Vision Beta for other models
+          return "x-ai/grok-vision-beta";
+        };
+
         // Select model and add plugins if web search is enabled
         const modelToUse = shouldUseVisionModel
-          ? "x-ai/grok-vision-beta"
+          ? getVisionModel(currentModel)
           : webSearchActive
             ? ensureOnlineSlug(currentModel)
             : currentModel;
@@ -1092,15 +1110,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     setIsProcessing(true);
 
     try {
-      // Check if we should use vision model
+      // Check if we should use vision model (for images, video, or audio)
       const shouldUseVisionModel = Array.isArray(userMessage.content) &&
-        userMessage.content.some(item => item.type === 'image_url');
+        userMessage.content.some(item => item.type === 'image_url' || item.type === 'video_url' || item.type === 'audio_url');
 
       // Prepare API messages
       const apiMessages = prepareApiMessages(userMessage, previousMessages, shouldUseVisionModel);
 
+      // Helper function to select appropriate vision model
+      const getVisionModel = (currentModel: string): string => {
+        // If current model is GLM 4.5V, use it for vision tasks
+        if (currentModel === "z-ai/glm-4.5v") {
+          return "z-ai/glm-4.5v";
+        }
+        // Default to Grok Vision Beta for other models
+        return "x-ai/grok-vision-beta";
+      };
+
       // Select model
-      const modelToUse = shouldUseVisionModel ? "x-ai/grok-vision-beta" : currentModel;
+      const modelToUse = shouldUseVisionModel ? getVisionModel(currentModel) : currentModel;
 
       // Create streaming message placeholder
       const streamingMessageId = generateId('assistant-');

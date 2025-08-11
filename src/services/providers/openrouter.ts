@@ -69,11 +69,31 @@ export const openRouterProvider: AIServiceProvider = {
           return m;
         });
 
+        // Helper function to get model-specific max_tokens
+        const getModelMaxTokens = (model: string, defaultMaxTokens: number = 8192): number => {
+          const MODEL_CONFIGS: Record<string, { max_tokens: number; context_window: number }> = {
+            "z-ai/glm-4.5v": {
+              max_tokens: 16000,
+              context_window: 64000
+            },
+            "z-ai/glm-4.5": {
+              max_tokens: 8192,
+              context_window: 64000
+            },
+            "z-ai/glm-4.5-air:free": {
+              max_tokens: 8192,
+              context_window: 64000
+            }
+          };
+          return MODEL_CONFIGS[model]?.max_tokens || defaultMaxTokens;
+        };
+
+        const modelToUse = options.model || "x-ai/grok-4";
         const requestBody: ChatCompletionRequest = {
-          model: options.model || "x-ai/grok-4",
+          model: modelToUse,
           messages: cachedMessages,
           temperature: options.temperature ?? 0.7,
-          max_tokens: options.max_tokens ?? 8192,
+          max_tokens: options.max_tokens ?? getModelMaxTokens(modelToUse),
           usage: { include: true },
           ...(options.plugins && { plugins: options.plugins }),
         };
@@ -128,11 +148,12 @@ export const openRouterProvider: AIServiceProvider = {
           return m;
         });
 
+        const modelToUse = options.model || "x-ai/grok-4";
         const requestBody: ChatCompletionRequest = {
-          model: options.model || "x-ai/grok-4",
+          model: modelToUse,
           messages: cachedMessages,
           temperature: options.temperature ?? 0.7,
-          max_tokens: options.max_tokens ?? 8192,
+          max_tokens: options.max_tokens ?? getModelMaxTokens(modelToUse),
           stream: true,
           usage: { include: true },
           ...(options.plugins && { plugins: options.plugins }),
