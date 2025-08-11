@@ -228,6 +228,7 @@ export const xaiService = {
           messages: formattedMessages,
           temperature: options.temperature || DEFAULT_OPTIONS.temperature,
           max_tokens: options.max_tokens || DEFAULT_OPTIONS.max_tokens,
+          plugins: options.plugins,
         };
 
         console.log("Sending request to OpenRouter API (attempt " + (retries + 1) + "):", 
@@ -296,6 +297,7 @@ export const xaiService = {
           temperature: options.temperature || DEFAULT_OPTIONS.temperature,
           max_tokens: options.max_tokens || DEFAULT_OPTIONS.max_tokens,
           stream: true,
+          plugins: options.plugins,
         };
 
         console.log("Sending streaming request to OpenRouter API (attempt " + (retries + 1) + "):", 

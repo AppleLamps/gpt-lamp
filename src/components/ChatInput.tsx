@@ -1,10 +1,11 @@
 import React, { useState, FormEvent, useRef, useEffect } from "react";
-import { Send, Plus, X, Image as ImageIcon, Paperclip, ChevronDown, ChevronUp, Camera, Sparkles, ArrowUp } from "lucide-react";
+import { Send, Plus, X, Image as ImageIcon, Paperclip, ChevronDown, ChevronUp, Camera, Sparkles, ArrowUp, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FileUploader, { ProcessedFile } from "./FileUploader";
 import { useToast } from "@/hooks/use-toast";
 import { xaiService } from "@/services/api";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useChatContext } from "@/contexts/ChatContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper function to generate IDs
@@ -43,6 +44,7 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentModel, setCurrentModel } = useSettings();
+  const { isWebEnabled, toggleWebSearch } = useChatContext();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -546,6 +548,22 @@ const ChatInput = ({
               >
                 <Paperclip size={16} />
                 {showFileUploader ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleWebSearch}
+                disabled={isProcessing}
+                className={cn(
+                  "p-1.5 rounded-md",
+                  "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                  "hover:bg-gray-100 dark:hover:bg-gray-600",
+                  isWebEnabled && "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+                  isProcessing && "opacity-50 cursor-not-allowed"
+                )}
+                title="Toggle web search"
+              >
+                <Search size={16} />
               </button>
             </div>
             
